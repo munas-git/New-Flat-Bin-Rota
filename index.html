@@ -275,7 +275,7 @@
       const schedule = generateSchedule(weekNumber);
       
       document.getElementById("reminderText").innerHTML = 
-        `$<strong>{room}</strong> please don't forget to empty out the kitchen refuse bin, and take out the <strong>${binType}</strong> by Sunday.`;
+        `<strong>${room}</strong> please don't forget to empty out the kitchen refuse bin, and take out the <strong>${binType}</strong> by Sunday.`;
       
       const today = new Date();
       const weekStart = getDateFromWeek(today.getFullYear(), weekNumber, 1);
