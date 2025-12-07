@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🗑️ Trash Timetable</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      transition: background 0.3s, color 0.3s;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    
+    body.light { background: #f3f4f6; color: #000; }
+    body.dark { background: #111827; color: #fff; }
+    
+    .container { max-width: 768px; margin: 0 auto; }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    h1 { font-size: 2rem; font-weight: bold; }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover { background: #2563eb; }
+    
+    .btn-outline {
+      background: transparent;
+      border: 2px solid #d1d5db;
+    }
+    
+    body.dark .btn-outline { border-color: #4b5563; }
+    
+    .card {
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    body.light .card { background: white; border: 1px solid #e5e7eb; }
+    body.dark .card { background: #1f2937; border: 1px solid #374151; }
+    
+    .reminder-icon { font-size: 20px; margin-right: 8px; }
+    
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    
+    body.light .progress-bar { background: #d1d5db; }
+    body.dark .progress-bar { background: #374151; }
+    
+    .progress-fill {
+      height: 100%;
+      background: #10b981;
+      transition: width 1s ease;
+    }
+    
+    .text-secondary { font-size: 14px; margin-top: 4px; }
+    body.light .text-secondary { color: #6b7280; }
+    body.dark .text-secondary { color: #9ca3af; }
+    
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    
+    .schedule-item {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    body.light .schedule-item { background: white; border-color: #e5e7eb; }
+    body.dark .schedule-item { background: #1f2937; border-color: #374151; }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 12px;
+    }
+    
+    .room-info { display: flex; align-items: center; margin-bottom: 12px; }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .modal.show { display: flex; }
+    
+    .modal-content {
+      width: 90%;
+      max-width: 400px;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    
+    body.light .modal-content { background: white; }
+    body.dark .modal-content { background: #1f2937; }
+    
+    select, input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    
+    body.dark select, body.dark input {
+      background: #374151;
+      color: white;
+      border-color: #4b5563;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body class="light">
+  <div class="container">
+    <div class="header">
+      <h1>🗑️ Trash Timetable</h1>
+      <button class="btn btn-outline" onclick="toggleDarkMode()">
+        <span id="themeIcon">🌙</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; align-items: center; font-size: 1.2rem; font-weight: 600; margin-bottom: 12px;">
+        <span class="reminder-icon">⚠️</span> Reminder
+      </div>
+      <p id="reminderText"></p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressBar"></div>
+      </div>
+      <p class="text-secondary" id="progressText"></p>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; align-items: center; font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;">
+        <span class="reminder-icon">📅</span> Upcoming Schedule
+      </div>
+      <div class="schedule-grid" id="scheduleGrid"></div>
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%;" onclick="showModal()">
+      Export to Calendar
+    </button>
+  </div>
+
+  <div class="modal" id="exportModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 16px; font-size: 1.2rem;">Export to Calendar</h3>
+      <label style="font-weight: 600;">Select Your Room:</label>
+      <select id="roomSelect">
+        <option value="">Choose...</option>
+        <option value="Room 1">Room 1</option>
+        <option value="Room 2">Room 2</option>
+        <option value="Room 3">Room 3</option>
+        <option value="Room 4">Room 4</option>
+        <option value="Room 5">Room 5</option>
+        <option value="Room 6">Room 6</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn btn-primary" style="flex: 1;" onclick="downloadICS()">Download .ics</button>
+        <button class="btn btn-outline" style="flex: 1;" onclick="hideModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rooms = ["Room 1", "Room 2", "Room 3", "Room 4", "Room 5", "Room 6"];
+    const bins = ["Refuse Bin", "Recycle Bin"];
+    const colors = ["#ef4444", "#3b82f6", "#10b981", "#eab308", "#a855f7", "#ec4899"];
+
+    function getWeekNumber() {
+      const today = new Date();
+      const target = new Date(today.valueOf());
+      const dayNr = (today.getDay() + 6) % 7;
+      target.setDate(target.getDate() - dayNr + 3);
+      const firstThu = target.valueOf();
+      const yearStart = new Date(target.getFullYear(), 0, 1);
+      return 1 + Math.round((firstThu - yearStart) / (7 * 86400000));
+    }
+
+    function getAssignment(week) {
+      return {
+        room: rooms[((week - 4) % rooms.length + rooms.length) % rooms.length],
+        binType: bins[((week - 1) % bins.length + bins.length) % bins.length]
+      };
+    }
+
+    function getDateFromWeek(year, week, day) {
+      const simple = new Date(year, 0, 1 + (week - 1) * 7);
+      const dow = simple.getDay();
+      const start = new Date(simple);
+      if (dow <= 4) start.setDate(simple.getDate() - dow + 1);
+      else start.setDate(simple.getDate() + 8 - dow);
+      const result = new Date(start);
+      result.setDate(start.getDate() + day - 1);
+      return result;
+    }
+
+    function generateSchedule(weekNumber, weeksAhead = 8) {
+      const schedule = [];
+      const year = new Date().getFullYear();
+      for (let i = 0; i < weeksAhead; i++) {
+        const w = weekNumber + i;
+        const start = getDateFromWeek(year, w, 1);
+        const end = getDateFromWeek(year, w, 7);
+        const { room, binType } = getAssignment(w);
+        schedule.push({
+          week: w,
+          start,
+          end,
+          room,
+          bin: binType,
+          dates: `${start.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} - ${end.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`
+        });
+      }
+      return schedule;
+    }
+
+    function init() {
+      const weekNumber = getWeekNumber();
+      const { room, binType } = getAssignment(weekNumber);
+      const schedule = generateSchedule(weekNumber);
+      
+      document.getElementById("reminderText").innerHTML = 
+        `$<strong>{room}</strong> please don't forget to empty out the kitchen refuse bin, and take out the <strong>${binType}</strong> by Sunday.`;
+      
+      const today = new Date();
+      const weekStart = getDateFromWeek(today.getFullYear(), weekNumber, 1);
+      const progress = Math.max(0, Math.min(100, ((today - weekStart) / (7 * 86400000)) * 100));
+      
+      document.getElementById("progressBar").style.width = progress + "%";
+      document.getElementById("progressText").textContent = Math.round(progress) + "% of the week passed";
+      
+      const grid = document.getElementById("scheduleGrid");
+      grid.innerHTML = "";
+      
+      schedule.forEach((item, index) => {
+        const num = parseInt(item.room.split(" ")[1], 10) || 1;
+        const color = colors[(num - 1) % colors.length];
+        const icon = item.bin.includes("Recycle") ? "♻️" : "🗑️";
+        
+        const div = document.createElement("div");
+        div.className = "schedule-item";
+        div.innerHTML = `
+          <div class="room-info">
+            <div class="avatar" style="background: ${color};">${num}</div>
+            <div>
+              <div style="font-weight: 600;">${item.room}</div>
+              <div class="text-secondary">${item.dates}</div>
+            </div>
+          </div>
+          <div class="text-secondary">
+            Bin: <strong>${item.bin}</strong> ${icon}
+          </div>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    function toggleDarkMode() {
+      const body = document.body;
+      const icon = document.getElementById("themeIcon");
+      if (body.classList.contains("light")) {
+        body.classList.remove("light");
+        body.classList.add("dark");
+        icon.textContent = "☀️";
+      } else {
+        body.classList.remove("dark");
+        body.classList.add("light");
+        icon.textContent = "🌙";
+      }
+    }
+
+    function showModal() {
+      document.getElementById("exportModal").classList.add("show");
+    }
+
+    function hideModal() {
+      document.getElementById("exportModal").classList.remove("show");
+      document.getElementById("roomSelect").value = "";
+    }
+
+    function downloadICS() {
+      const userRoom = document.getElementById("roomSelect").value;
+      if (!userRoom) {
+        alert("Please select your room first.");
+        return;
+      }
+
+      const weekNumber = getWeekNumber();
+      const schedule = generateSchedule(weekNumber, 8);
+      const userWeeks = schedule.filter(s => s.room === userRoom);
+      
+      let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Trash Timetable//EN\n";
+      
+      userWeeks.forEach(w => {
+        const dtStart = w.end.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+        icsContent += `BEGIN:VEVENT\nSUMMARY:${w.bin} Duty\nDTSTART:${dtStart}\nDESCRIPTION:Remember to take out the ${w.bin}\nEND:VEVENT\n`;
+      });
+      
+      icsContent += "END:VCALENDAR";
+      
+      const blob = new Blob([icsContent], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TrashDuty_${userRoom.replace(" ", "_")}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      
+      hideModal();
+    }
+
+    init();
+  </script>
+</body>
+</html>
