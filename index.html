@@ -203,8 +203,7 @@
       <select id="roomSelect">
         <option value="">Choose...</option>
         <option value="Room 1">Room 1</option>
-        <option value="Room 2">Room 2</option>  
-        <!-- <option value="Room 3">Room 3</option> -->
+        <option value="Room 2">Room 2</option>
         <option value="Room 4">Room 4</option>
         <option value="Room 5">Room 5</option>
         <option value="Room 6">Room 6</option>
@@ -217,9 +216,21 @@
   </div>
 
   <script>
-    const rooms = ["Room 1", "Room 2", "Room 4", "Room 5", "Room 6"];
+    // Keep all 6 rooms in the rotation array so the bin order is preserved.
+    // Room 3 stays in the array at index 2 — it just won't be shown in the UI
+    // or offered in the export dropdown.
+    const rooms = ["Room 1", "Room 2", "Room 3", "Room 4", "Room 5", "Room 6"];
     const bins = ["Refuse Bin", "Recycle Bin"];
-    const colors = ["#ef4444", "#3b82f6", "#10b981", "#eab308", "#a855f7", "#ec4899"];
+
+    // Colors mapped by room number (1-indexed); Room 3 has a color but is never displayed
+    const colors = {
+      "Room 1": "#ef4444",
+      "Room 2": "#3b82f6",
+      "Room 3": "#10b981", // never shown
+      "Room 4": "#eab308",
+      "Room 5": "#a855f7",
+      "Room 6": "#ec4899"
+    };
 
     function getWeekNumber() {
       const today = new Date();
@@ -273,41 +284,51 @@
       const weekNumber = getWeekNumber();
       const { room, binType } = getAssignment(weekNumber);
       const schedule = generateSchedule(weekNumber);
-      
-      document.getElementById("reminderText").innerHTML = 
-        `<strong>${room}</strong> please don't forget to empty out the kitchen refuse bin, and take out the <strong>${binType}</strong> by Sunday.`;
-      
+
+      // Reminder: if the current week is Room 3's turn, show a neutral message
+      // (or you could skip it — here we just handle it gracefully)
+      if (room === "Room 3") {
+        document.getElementById("reminderText").innerHTML =
+          `No duty assigned this week.`;
+      } else {
+        document.getElementById("reminderText").innerHTML =
+          `<strong>${room}</strong> please don't forget to empty out the kitchen refuse bin, and take out the <strong>${binType}</strong> by Sunday.`;
+      }
+
       const today = new Date();
       const weekStart = getDateFromWeek(today.getFullYear(), weekNumber, 1);
       const progress = Math.max(0, Math.min(100, ((today - weekStart) / (7 * 86400000)) * 100));
-      
+
       document.getElementById("progressBar").style.width = progress + "%";
       document.getElementById("progressText").textContent = Math.round(progress) + "% of the week passed";
-      
+
       const grid = document.getElementById("scheduleGrid");
       grid.innerHTML = "";
-      
-      schedule.forEach((item, index) => {
-        const num = parseInt(item.room.split(" ")[1], 10) || 1;
-        const color = colors[(num - 1) % colors.length];
-        const icon = item.bin.includes("Recycle") ? "♻️" : "🗑️";
-        
-        const div = document.createElement("div");
-        div.className = "schedule-item";
-        div.innerHTML = `
-          <div class="room-info">
-            <div class="avatar" style="background: ${color};">${num}</div>
-            <div>
-              <div style="font-weight: 600;">${item.room}</div>
-              <div class="text-secondary">${item.dates}</div>
+
+      // Filter out Room 3 weeks from the displayed schedule
+      schedule
+        .filter(item => item.room !== "Room 3")
+        .forEach((item) => {
+          const color = colors[item.room] || "#6b7280";
+          const icon = item.bin.includes("Recycle") ? "♻️" : "🗑️";
+          const num = item.room.split(" ")[1];
+
+          const div = document.createElement("div");
+          div.className = "schedule-item";
+          div.innerHTML = `
+            <div class="room-info">
+              <div class="avatar" style="background: ${color};">${num}</div>
+              <div>
+                <div style="font-weight: 600;">${item.room}</div>
+                <div class="text-secondary">${item.dates}</div>
+              </div>
             </div>
-          </div>
-          <div class="text-secondary">
-            Bin: <strong>${item.bin}</strong> ${icon}
-          </div>
-        `;
-        grid.appendChild(div);
-      });
+            <div class="text-secondary">
+              Bin: <strong>${item.bin}</strong> ${icon}
+            </div>
+          `;
+          grid.appendChild(div);
+        });
     }
 
     function toggleDarkMode() {
@@ -343,16 +364,16 @@
       const weekNumber = getWeekNumber();
       const schedule = generateSchedule(weekNumber, 8);
       const userWeeks = schedule.filter(s => s.room === userRoom);
-      
+
       let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Trash Timetable//EN\n";
-      
+
       userWeeks.forEach(w => {
         const dtStart = w.end.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
         icsContent += `BEGIN:VEVENT\nSUMMARY:${w.bin} Duty\nDTSTART:${dtStart}\nDESCRIPTION:Remember to take out the ${w.bin}\nEND:VEVENT\n`;
       });
-      
+
       icsContent += "END:VCALENDAR";
-      
+
       const blob = new Blob([icsContent], { type: "text/calendar" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -362,7 +383,7 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      
+
       hideModal();
     }
 
